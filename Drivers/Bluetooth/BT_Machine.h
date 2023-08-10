@@ -40,7 +40,6 @@ uint8_t BT_MC_parse_Settings(machineSettingsTypeDef *mspBT);
 uint8_t BT_MC_Save_Settings(void);
 uint8_t GetMotorID_from_BTMotor_ID(uint8_t BT_motorID);
 uint8_t Get_BTMotorID_from_Motor_ID(uint8_t motorID);
-uint8_t Get_BTMotorID_from_Motor_ID(uint8_t motorID);
 uint8_t GetMotorId_from_CarousalID(uint8_t carousalID);
 uint8_t BT_generate_GbCalibMsg(GB_diag *gbd);
 #endif /* BT_MC_H_ */

@@ -479,7 +479,6 @@ void UART_IDLECallback(void){
 				  S.BT_dataOK = BT_MC_parse_Settings(&msp_BT); // we have to parse inside this function because it needs buffer Rec
 				  S.switchState = TO_SETTINGS; // only check for this in IDLE STATE
 			  }
-
 			  else if (BT.information == DIAGNOSTICS_FROM_APP){
 				  //7E240401064102014002014204001E4304005A7E
 				  if (BT.subState == BT_DIAGNOSTIC_RUN){

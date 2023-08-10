@@ -139,7 +139,7 @@ void FDCAN_parseForMotherBoard()
 		case LIFTRUNTIMEDATA_FUNCTIONID:
 			motorID = GetMotorID_from_CANAddress(source_address);
 			FDCAN_Recieve_RunDataFromLiftMotors(functionID,motorID);
-			SO_CheckLiftRelativeError(&SO,&R[RD_LEFT_LIFT],&R[RD_RIGHT_LIFT]);
+			SO_CheckLiftRelativeError(&S,&SO,&R[RD_LEFT_LIFT],&R[RD_RIGHT_LIFT]);
 			SO_incrementCANCounter(&SO,motorID);
 			break;
 		case LIFTSTROKEOVER_FUNCTIONID:
@@ -261,6 +261,9 @@ void FDCAN_Recieve_HomingDataFromLiftMotors(uint8_t source_address)//,LiftRunTim
 void FDCAN_Recieve_LiftChangeDirection(uint8_t source)
 {
 	SO.liftStrokeOverMsgsRecieved ++;
+	if (SO.liftStrokeOverMsgsRecieved == 1){
+		SO_disableAndResetCANObservers(&SO);
+	}
 	if(SO.liftStrokeOverMsgsRecieved==2){
 		UpdateMachineParameters(&msp,&mcParams);
 		if (mcParams.currentLiftDirection == LIFT_DOWN){
@@ -272,6 +275,9 @@ void FDCAN_Recieve_LiftChangeDirection(uint8_t source)
 		}
 		FDCAN_sendNewStroke_ToBothLiftMotors(&mcParams);
 		SO.liftStrokeOverMsgsRecieved = 0;
+		if (S.runMode != RUN_PAUSED){ // if we get the cahnge layer when we are pausing we dont want to  enable the CAN observer
+			SO_enableAllCANObservers(&SO);
+		}
 		L.logLayerChange = 1; // for logging
 	}
 }

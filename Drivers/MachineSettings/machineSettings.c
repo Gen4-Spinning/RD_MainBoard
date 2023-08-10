@@ -63,6 +63,7 @@ void CalculateMachineParameters(machineSettingsTypeDef *ms,machineParamsTypeDef 
 	mp->RD.yarnWeightinGramsPerBobbin = mp->RD.totalYarnLengthInMtrsPerBobbin/mp->RD.outputYarnCountNm;
 
 	//Now get the values for the motors, and also the values that keep updating as the machine runs
+	//TODO merge this with the values in VFD.c/h theyre seperate here
 	if(ms->spindleSpeed == 6000){
 		mp->rampTimes_sec = 30;
 	}else if(ms->spindleSpeed == 8000){

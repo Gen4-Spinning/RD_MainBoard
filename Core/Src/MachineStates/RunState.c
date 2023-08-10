@@ -38,6 +38,7 @@ void RunState(void){
 	uint8_t response = 0;
 	uint8_t noOfMotors = 0;
 	uint8_t BTpacketSize = 0;
+	long currentTime;
 	while(1){
 
 		if (S.oneTime){
@@ -47,9 +48,8 @@ void RunState(void){
 			response = SendCommands_To_MultipleMotors(motors,noOfMotors,START);
 			if (response!= 2){
 				SO_enableCANObservers(&SO,motors,noOfMotors);
-				TurnOnVFD(&hmcp, &mcp_portA, SPINDLE_SPEED_6000); // how to check this has started?
+				VFD_TurnOn(&vfd,&hmcp, &mcp_portA); // how to check this has started?
 			}
-
 
 			SO_Start_LiftRelativeError_Delay();
 			S.runMode = RUN_OPERATING;
@@ -65,6 +65,8 @@ void RunState(void){
 			TowerLamp_SetState(&hmcp, &mcp_portB,BUZZER_OFF,RED_OFF,GREEN_ON,AMBER_OFF);
 			TowerLamp_ApplyState(&hmcp,&mcp_portB);
 
+			mcParams.lengthDeliveredPerSpindle = 0.01;
+
 			S.oneTime = 0;
 		}
 
@@ -78,7 +80,7 @@ void RunState(void){
 				TowerLamp_SetState(&hmcp, &mcp_portB,BUZZER_OFF,RED_OFF,GREEN_OFF,AMBER_ON);
 				TowerLamp_ApplyState(&hmcp,&mcp_portB);
 
-				TurnOffVFD(&hmcp, &mcp_portA);
+				VFD_TurnOff(&vfd,&hmcp, &mcp_portA);
 				//TODO - later make it such that once the CAN starts it never needs to stop.
 				SO_disableAndResetCANObservers(&SO);
 
@@ -98,7 +100,7 @@ void RunState(void){
 				// so we will not have this statement.
 				if (response!= 2){
 					SO_enableCANObservers(&SO,motors,noOfMotors);
-					TurnOnVFD(&hmcp, &mcp_portA, SPINDLE_SPEED_6000); // how to check this has started?
+					VFD_TurnOn(&vfd,&hmcp, &mcp_portA); // how to check this has started?
 				}
 
 				S.runMode = RUN_OPERATING;
@@ -119,7 +121,7 @@ void RunState(void){
 			S.runMode = RUN_STOPPED ;
 			S.BT_pauseReason = 0;
 
-			TurnOffVFD(&hmcp, &mcp_portA);
+			VFD_TurnOff(&vfd,&hmcp, &mcp_portA);
 			SO_disableAndResetCANObservers(&SO);
 
 			//beep once when we go to idle
@@ -132,6 +134,10 @@ void RunState(void){
 			break;
 		}
 
+		if (S.oneSecTimer != currentTime){
+			mcParams.totalPower = R[0].power + R[1].power + R[2].power ;
+			currentTime = S.oneSecTimer;
+		}
 		//--------ways to go into Error State--------
 
 		if (SO.liftRelativePosError == 1){

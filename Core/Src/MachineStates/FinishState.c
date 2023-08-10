@@ -41,9 +41,14 @@ void FinishState(void){
 	while(1){
 
 		if (S.oneTime){
+			//switch off VFD
+			VFD_TurnOff(&hmcp, &mcp_portA);
+
 			uint8_t motors[] = {CALENDER_ROLLER,RD_LEFT_LIFT,RD_RIGHT_LIFT};
-			noOfMotors = 6;
+			noOfMotors = 3;
 			SendCommands_To_MultipleMotors(motors,noOfMotors,RAMPDOWN_STOP);
+
+			SO_disableAndResetCANObservers(&SO);
 
 			TowerLamp_SetState(&hmcp, &mcp_portB,BUZZER_OFF,RED_ON,GREEN_ON,AMBER_ON);
 			TowerLamp_ApplyState(&hmcp,&mcp_portB);

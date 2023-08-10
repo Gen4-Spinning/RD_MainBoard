@@ -109,6 +109,7 @@ MCP23017_PortA mcp_portA;
 MCP23017_PortB mcp_portB_whichSensor;
 MCP23017_PortB mcp_portB_sensorVal;
 SensorTypeDef sensor;
+VFD vfd;
 Log L;
 
 char BufferRec[150];
@@ -161,14 +162,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
   }
 
   if (htim == &htim16){ // 1 sec timer that checks if the CAN connections are all OK.
-	  SO.canOverallStatus = SO_checkCanObservers(&SO);
-	  if (SO.canOverallStatus != ALL_CANS_HEALTHY){
+	  SO.canOverallStatus = SO_checkCanObservers(&SO); // FOR RD weve set the threshold to 2,and seen that 4, during binding end is what we get.
+	  /*if (SO.canOverallStatus != ALL_CANS_HEALTHY){
 		  ME.ErrorFlag = 1;
 		  ME_addErrors(&ME,ERR_SYSTEM_LEVEL_SOURCE,SYS_CAN_CUT_ERROR, SO.canOverallStatus, 0); // maybe later find out which ACK failed.
 		  S.SMPS_switchOff = 1;
 		  //stp the timer if you find you have an error.
 		  HAL_TIM_Base_Stop_IT(&htim16);
-	  }
+	  }*/
   }
 
   if(htim==&htim15){
@@ -195,14 +196,21 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		  S.oneSecTimer++;
 		  timer7Count = 0;
 		  Toggle_State_LEDs(&S);
+		  //calculate doff Percent
+		  mcParams.doffPercent = (((float)mcParams.currentStrokeNo)/mcParams.RD.strokesPerDoff)*100.0;
+		  if (mcParams.doffPercent <0.01){
+			  mcParams.doffPercent = 0.01;
+		  }
+		  if (S.runMode == RUN_OPERATING){
+			  mcParams.lengthDeliveredPerSpindle += mcParams.RD.delivery_MtrMin/60;
+		  }
+
 	  }
 	  //send data in GB calib state every 100 ms
 	  if (S.current_state == GB_CALIB_STATE){
 		  S.BT_send_GBcalibData = 1;
 	  }
-
   }
-
 
   if(htim == &htim6){ //500ms delay to start checking lift relative data
 	  SO.initialLiftPosRecieved= 1;
@@ -217,23 +225,14 @@ uint8_t sensorVal;
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
 	UNUSED(GPIO_Pin);
 
-	if (GPIO_Pin == INT_B_Pin){
-		sensorTrigger = Sensor_whichTriggered(&hmcp,&mcp_portB_sensorVal);
-		if (sensorTrigger == SLIVER_CUT_SENSOR){
-			sensor.creelSensor = Sensor_GetTriggerValue(&hmcp,&mcp_portB_sensorVal,SLIVER_CUT_SENSOR);
-			if(sensor.creelSensor == 1){
-				sensor.latchedCreelSensor = 1;
-			}
-		}
-	}else if (GPIO_Pin == SMPS_OK_IP_Pin){
+	if (GPIO_Pin == SMPS_OK_IP_Pin){
 		// if the mother board has turned the SMPS on, but the smps is off, we have a problem!
-/*		S.SMPS_OK_signal = (uint8_t)(HAL_GPIO_ReadPin(SMPS_OK_IP_GPIO_Port, SMPS_OK_IP_Pin));
+		S.SMPS_OK_signal = (uint8_t)(HAL_GPIO_ReadPin(SMPS_OK_IP_GPIO_Port, SMPS_OK_IP_Pin));
 		if ((S.SMPS_cntrl == SMPS_TURNEDON) && (S.SMPS_OK_signal == SMPS_OFF)){
 			ME.ErrorFlag = 1;
 			ME_addErrors(&ME,ERR_SYSTEM_LEVEL_SOURCE, SYS_SMPS_ERROR, ERROR_SOURCE_SYSTEM,0); // maybe later find out which ACK failed.
 			S.SMPS_switchOff = 1;
 		}
-*/
 	}
 	else{
 		// for the user input buttons - RED_pin,Green_Pin,Yellow_Pin are falling edge interrupts. Rotary_Pin is both
@@ -344,6 +343,9 @@ int main(void)
   CalculateMachineParameters(&msp,&mcParams);
   SetupMachineParametersForFirstLayer(&mcParams);
   ReadySetupCommand_AllMotors(&msp,&mcParams);
+  //set up the spindleSpeed
+  uint8_t spindleSpeedCode =  VFD_getSpindleSpeedCode(msp.spindleSpeed);
+  VFD_setSpindleSpeed(&vfd, spindleSpeedCode); //set this based on settings
   SO_Reset_InitialLiftPosRecieved(&SO);
 
   //Interrupts on UART1 connected to the bluetooth
@@ -358,7 +360,7 @@ int main(void)
   //set the initial Tower Lamp State
   TowerLamp_SetState(&hmcp, &mcp_portB,BUZZER_OFF,RED_OFF,GREEN_OFF,AMBER_OFF);
   TowerLamp_ApplyState(&hmcp,&mcp_portB);
-  TurnOffVFD(&hmcp,&mcp_portA);
+  VFD_TurnOff(&vfd,&hmcp,&mcp_portA);
 
   //read initial btns states and set either setup or run state.
   UsrBtns_SetInitialStates();
@@ -371,7 +373,7 @@ int main(void)
   ChangeState(&S,IDLE_STATE);
 
   //Setup the Bluetooth device MANUALLY ONLY.
-  //BTCmd.manual_setup = 1;
+  BTCmd.manual_setup = 1;
   if (BTCmd.manual_setup){
 	  BTCmd.manual_setup_result = BT_SetupDevice();
 	  if(BTCmd.manual_setup_result != 1){
@@ -385,17 +387,9 @@ int main(void)
   HAL_TIM_Base_Start_IT(&htim16);
 
   //SMPS - turn on the SMPS, wait a while to see if  short command.
-  SMPS_TurnOn();
-  HAL_Delay(3000);//contactor takes a long time to turn on.
-  //uint8_t smps = (uint8_t)(HAL_GPIO_ReadPin(SMPS_OK_IP_GPIO_Port, SMPS_OK_IP_Pin));
-  /*if (smps == SMPS_OFF){
-	  ME.ErrorFlag = 1;
-	  ME_addErrors(&ME,ERR_SYSTEM_LEVEL_SOURCE, SYS_SMPS_ERROR, ERROR_SOURCE_SYSTEM,0); // maybe later find out which ACK failed.
-	  S.SMPS_switchOff = 1;
-  }*/
-
-  S.LOG_enabled = 1;
-
+  SMPS_Init();
+  HAL_Delay(1000);//contactor takes a long time to turn on.
+  S.SMPS_cntrl = SMPS_TURNEDON;
   /* USER CODE END 2 */
 
   /* Infinite loop */

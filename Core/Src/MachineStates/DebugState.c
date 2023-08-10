@@ -141,11 +141,12 @@ void DebugState(void){
 		}
 
 		if (vfd_start){
-			TurnOnVFD(&hmcp, &mcp_portA, vfdSpeed);
+			vfd.vfdSpeed = vfdSpeed;
+			VFD_TurnOn(&vfd,&hmcp, &mcp_portA);
 			vfd_start = 0;
 		}
 		if (vfd_stop){
-			TurnOffVFD(&hmcp, &mcp_portA);
+			VFD_TurnOff(&vfd,&hmcp, &mcp_portA);
 			vfd_stop = 0;
 		}
 

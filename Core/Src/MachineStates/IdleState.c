@@ -22,6 +22,7 @@
 #include "TowerLamp.h"
 #include "mcp23017.h"
 #include "Log.h"
+#include "VFD.h"
 
 extern UART_HandleTypeDef huart1;
 
@@ -58,6 +59,9 @@ void IdleState(void){
 				CalculateMachineParameters(&msp,&mcParams);
 				SetupMachineParametersForFirstLayer(&mcParams);
 				ReadySetupCommand_AllMotors(&msp,&mcParams);
+				//set up spindle Speed incase its changed
+				uint8_t spindleSpeedCode = VFD_getSpindleSpeedCode(msp.spindleSpeed);
+				VFD_setSpindleSpeed(&vfd, spindleSpeedCode); //set this based on settings
 				//Reset Run machine Parameters
 			}
 			L.logRunStateChange = 1;

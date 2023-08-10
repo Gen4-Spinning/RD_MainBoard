@@ -19,11 +19,18 @@
 typedef struct VFD_struct{
 	uint8_t vfdSpeed;
 	uint16_t vfdOn;
+
+	uint16_t maxRPM;
+	uint8_t rampTime_sec;
+	float rampRate;
+	int16_t presentRPM;
 }VFD;
 
+extern VFD vfd;
 
-
-void TurnOnVFD(MCP23017_HandleTypeDef *mcp,MCP23017_PortA *p,uint8_t vfdSpeed);
-void TurnOffVFD(MCP23017_HandleTypeDef *mcp,MCP23017_PortA *p);
+uint8_t VFD_getSpindleSpeedCode(uint16_t spindleSpeed);
+void VFD_setSpindleSpeed(VFD *v,uint8_t spindlespeed_define);
+void VFD_TurnOn(VFD *v,MCP23017_HandleTypeDef *mcp,MCP23017_PortA *p);
+void VFD_TurnOff(VFD *v,MCP23017_HandleTypeDef *mcp,MCP23017_PortA *p);
 
 #endif /* VFD_CNTRL_VFD_H_ */

@@ -52,9 +52,9 @@ void HomingState(void){
 			uint8_t motors[] = {RD_LEFT_LIFT,RD_RIGHT_LIFT};
 			noOfMotors = 2;
 			response = SendCommands_To_MultipleMotors(motors,noOfMotors,HOMING);
-			/*if (response!= 2){
+			if (response!= 2){
 				SO_enableCANObservers(&SO,motors,noOfMotors);
-			}*/
+			}
 
 			Log_setUpLogging(&L,motors,noOfMotors);
 			L.logRunStateChange = 1;
@@ -64,6 +64,14 @@ void HomingState(void){
 			TowerLamp_SetState(&hmcp, &mcp_portB,BUZZER_OFF,RED_OFF,GREEN_OFF,AMBER_OFF);
 			TowerLamp_ApplyState(&hmcp,&mcp_portB);
 			S.oneTime = 0;
+		}
+
+
+		// because right at the end, during homing we re getting Can cut error
+		if (SO.CO[RD_LEFT_LIFT].enable == 1){
+			if ((R[RD_LEFT_LIFT].presentPosition <= 5) || (R[RD_RIGHT_LIFT].presentPosition<=5)){
+				SO_disableAndResetLiftObservers(&SO);
+			}
 		}
 
 		if (S.HomingDone == 1){

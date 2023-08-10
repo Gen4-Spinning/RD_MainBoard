@@ -14,6 +14,7 @@
 #include "MachineErrors.h"
 #include "StateMachine.h"
 #include "BT_Fns.h"
+#include "BT_Machine.h"
 #include "CommonConstants.h"
 #include "CAN_MotherBoard.h"
 #include "MotorComms.h"
@@ -24,6 +25,7 @@
 #include "SMPS.h"
 #include "mcp23017.h"
 #include "Log.h"
+#include "VFD.h"
 
 extern UART_HandleTypeDef huart1;
 
@@ -38,27 +40,45 @@ void ErrorState(void){
 	uint8_t BTpacketSize = 0;
 	uint8_t SMPS_turnOff_oneTime = 1;
 	uint8_t BTmotorID=0;
+	uint16_t errSource = 0;
 	while(1){
 
 		if (S.oneTime){
+			//Turn off the VFD
+			VFD_TurnOff(&vfd,&hmcp, &mcp_portA);
+
 			/* System Errors like ACK, CAN CUT error and SMPS errors take
 			 * precedence over motor Errors and lift relative errors. these errors means we have
 			 * to switch off the SMPS, so we check if any of the two errors are that.We also then
 			 * set the BT msg to indicate that command, instead of the motor command.
 			 */
 			if (ME.errType1 == ERR_SYSTEM_LEVEL_SOURCE){
-				if (ME.errReason1 != SYS_LIFT_RELATIVE_ERROR){
+				if (ME.errReason1 != SYS_LIFT_RELATIVE_ERROR){// because weve turned off the motors
 					SMPS_TurnOff(); // ACK err, CAN cut error and SMPS Err
 					S.SMPS_switchOff = 0;
 				}
-				SetBTErrors(&ME,ME.errReason1,ME.errSource1,ME.errCode1);
+				//for CAN cut error we re saying which motor the fault is coming from, so for that we need
+				//to set the correct HMI motor ID
+				if (ME.errReason1 == SYS_CAN_CUT_ERROR){
+					errSource = Get_BTMotorID_from_Motor_ID(ME.errSource1);
+				}else{
+					errSource = ME.errSource1;
+				}
+				SetBTErrors(&ME,ME.errReason1,errSource,ME.errCode1);
 
 			}else if (ME.errType2 == ERR_SYSTEM_LEVEL_SOURCE){
-				if (ME.errReason1 != SYS_LIFT_RELATIVE_ERROR){
+				if (ME.errReason2 != SYS_LIFT_RELATIVE_ERROR){
 					SMPS_TurnOff(); // ACK err, CAN cut error and SMPS Err
 					S.SMPS_switchOff = 0;
 				}
-				SetBTErrors(&ME,ME.errReason2,ME.errSource2,ME.errCode2);
+				//for CAN cut error we re saying which motor the fault is coming from, so for that we need
+				//to set the correct HMI motor ID
+				if (ME.errReason1 == SYS_CAN_CUT_ERROR){
+					errSource = Get_BTMotorID_from_Motor_ID(ME.errSource2);
+				}else{
+					errSource = ME.errSource2;
+				}
+				SetBTErrors(&ME,ME.errReason2,errSource,ME.errCode2);
 
 			}else if (ME.errType1 == ERR_MOTOR_SOURCE){
 				//send the Stop commands

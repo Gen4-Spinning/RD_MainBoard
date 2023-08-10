@@ -97,6 +97,9 @@ typedef struct machineParamaters_Struct{
 
     float currentRunTimeMin;
     int currentLiftDirection;
+    float doffPercent;
+    float lengthDeliveredPerSpindle;
+    float totalPower;
 
 }machineParamsTypeDef;
 
