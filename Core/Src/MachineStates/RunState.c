@@ -177,7 +177,7 @@ void RunState(void){
 			break;
 		}
 
-		if (mcParams.currentStrokeNo >= mcParams.RD.strokesPerDoff){
+		if (mcParams.currentStrokeNo > mcParams.RD.strokesPerDoff){
 			ChangeState(&S,FINISHED_STATE);
 			break;
 		}

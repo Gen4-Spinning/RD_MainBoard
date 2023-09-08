@@ -24,6 +24,7 @@
 #include "SMPS.h"
 #include "mcp23017.h"
 #include "Log.h"
+#include "VFD.h"
 
 extern UART_HandleTypeDef huart1;
 
@@ -42,7 +43,7 @@ void FinishState(void){
 
 		if (S.oneTime){
 			//switch off VFD
-			VFD_TurnOff(&hmcp, &mcp_portA);
+			VFD_TurnOff(&vfd,&hmcp, &mcp_portA);
 
 			uint8_t motors[] = {CALENDER_ROLLER,RD_LEFT_LIFT,RD_RIGHT_LIFT};
 			noOfMotors = 3;
@@ -63,6 +64,7 @@ void FinishState(void){
 			HAL_UART_Transmit_IT(&huart1,(uint8_t*)BufferTransmit,BTpacketSize);
 			S.BT_transmission_over = 0;
 			S.BT_sendState = 0;
+			buzzerCounter++;
 			if (buzzerCounter == 2){
 				TowerLamp_NegateState(&hmcp,&mcp_portB,TOWER_BUZZER);
 				TowerLamp_ApplyState(&hmcp,&mcp_portB);
